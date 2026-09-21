@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chartwork Calculator</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Arial,sans-serif;background:#eef4f8;color:#17212b
+}
+.app{max-width:900px;margin:auto;padding:20px}
+h1{margin:0 0 6px;color:#063b5c}
+.sub{margin:0 0 18px;color:#52616b}
+.card{
+  background:#fff;padding:18px;margin:14px 0;border-radius:12px;
+  box-shadow:0 2px 10px #0001
+}
+h2{font-size:19px;margin:0 0 14px;color:#075985}
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px
+}
+label{font-size:13px;font-weight:bold}
+input,select,button{
+  width:100%;padding:10px;margin-top:5px;border:1px solid #c5d0d8;
+  border-radius:7px;font-size:15px
+}
+button{
+  background:#075985;color:white;border:0;cursor:pointer;font-weight:bold
+}
+button:hover{background:#064c70}
+.result{
+  margin-top:14px;padding:12px;background:#edf7fc;border-left:4px solid #075985;
+  border-radius:5px;line-height:1.6
+}
+.error{color:#b42318;font-weight:bold}
+.small{font-size:12px;color:#667781}
+footer{text-align:center;font-size:12px;color:#71808a;margin:20px}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <h1>⚓ Chartwork Calculator</h1>
+  <p class="sub">Basic marine navigation calculations for nautical science study.</p>
+
+  <div class="card">
+    <h2>1. Speed, Distance & Time</h2>
+    <div class="grid">
+      <div>
+        <label>Calculation</label>
+        <select id="sdtType">
+          <option value="time">Find Time</option>
+          <option value="distance">Find Distance</option>
+          <option value="speed">Find Speed</option>
+        </select>
+      </div>
+      <div>
+        <label>Speed (knots)</label>
+        <input id="sdtSpeed" type="number" min="0" step="any">
+      </div>
+      <div>
+        <label>Distance (nautical miles)</label>
+        <input id="sdtDistance" type="number" min="0" step="any">
+      </div>
+      <div>
+        <label>Time (hours)</label>
+        <input id="sdtTime" type="number" min="0" step="any">
+      </div>
+    </div>
+    <br>
+    <button onclick="calcSDT()">Calculate</button>
+    <div id="sdtResult" class="result">Enter values and calculate.</div>
+  </div>
+
+  <div class="card">
+    <h2>2. Course & Distance Between Positions</h2>
+    <p class="small">Uses latitude/longitude on a spherical Earth approximation. Good for basic study calculations.</p>
+    <div class="grid">
+      <div>
+        <label>Start Latitude (°)</label>
+        <input id="lat1" type="number" step="any" placeholder="e.g. 18.5204">
+      </div>
+      <div>
+        <label>Start Longitude (°)</label>
+        <input id="lon1" type="number" step="any" placeholder="e.g. 73.8567">
+      </div>
+      <div>
+        <label>End Latitude (°)</label>
+        <input id="lat2" type="number" step="any" placeholder="e.g. 19.0760">
+      </div>
+      <div>
+        <label>End Longitude (°)</label>
+        <input id="lon2" type="number" step="any" placeholder="e.g. 72.8777">
+      </div>
+    </div>
+    <br>
+    <button onclick="calcCourse()">Calculate</button>
+    <div id="courseResult" class="result">Enter two positions and calculate.</div>
+  </div>
+
+  <div class="card">
+    <h2>3. ETA Calculator</h2>
+    <div class="grid">
+      <div>
+        <label>Departure Date</label>
+        <input id="etaDate" type="date">
+      </div>
+      <div>
+        <label>Departure Time</label>
+        <input id="etaTime" type="time">
+      </div>
+      <div>
+        <label>Distance (NM)</label>
+        <input id="etaDistance" type="number" min="0" step="any">
+      </div>
+      <div>
+        <label>Speed (knots)</label>
+        <input id="etaSpeed" type="number" min="0" step="any">
+      </div>
+    </div>
+    <br>
+    <button onclick="calcETA()">Calculate ETA</button>
+    <div id="etaResult" class="result">Enter departure, distance and speed.</div>
+  </div>
+
+  <div class="card">
+    <h2>4. Current Set & Drift</h2>
+    <p class="small">
+      Calculates resultant course and speed from ship's through-water
+      motion plus current.
+    </p>
+    <div class="grid">
+      <div>
+        <label>Ship Course (°T)</label>
+        <input id="shipCourse" type="number" min="0" max="360" step="any">
+      </div>
+      <div>
+        <label>Ship Speed (knots)</label>
+        <input id="shipSpeed" type="number" min="0" step="any">
+      </div>
+      <div>
+        <label>Current Set (°T)</label>
+        <input id="currentSet" type="number" min="0" max="360" step="any">
+      </div>
+      <div>
+        <label>Current Drift (knots)</label>
+        <input id="currentDrift" type="number" min="0" step="any">
+      </div>
+    </div>
+    <br>
+    <button onclick="calcCurrent()">Calculate Resultant</button>
+    <div id="currentResult" class="result">Enter ship and current information.</div>
+  </div>
+
+  <footer>
+    Educational calculator only. Always verify navigation calculations using
+    approved nautical publications and proper navigation procedures.
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+function num(id){
+  const v = parseFloat($(id).value);
+  return Number.isFinite(v) ? v : NaN;
+}
+
+function valid(v){ return Number.isFinite(v); }
+
+function fmt(v,d=2){
+  return Number(v).toFixed(d);
+}
+
+function norm360(v){
+  return ((v % 360) + 360) % 360;
+}
+
+function calcSDT(){
+  const type=$("sdtType").value;
+  let s=num("sdtSpeed"), d=num("sdtDistance"), t=num("sdtTime");
+
+  if(type==="time"){
+    if(!(s>0) || !(d>=0))
+      return $("sdtResult").innerHTML='<span class="error">Enter a positive speed and a valid distance.</span>';
+    t=d/s;
+    $("sdtResult").innerHTML=`Time = <b>${fmt(t)} hours</b> (${fmt(t*60)} minutes)`;
+  }else if(type==="distance"){
+    if(!(s>=0) || !(t>=0) || s===0)
+      return $("sdtResult").innerHTML='<span class="error">Enter a positive speed and valid time.</span>';
+    d=s*t;
+    $("sdtResult").innerHTML=`Distance = <b>${fmt(d)} NM</b>`;
+  }else{
+    if(!(d>=0) || !(t>0))
+      return $("sdtResult").innerHTML='<span class="error">Enter a valid distance and positive time.</span>';
+    s=d/t;
+    $("sdtResult").innerHTML=`Speed = <b>${fmt(s)} knots</b>`;
+  }
+}
+
+function calcCourse(){
+  const lat1=num("lat1"),lon1=num("lon1"),lat2=num("lat2"),lon2=num("lon2");
+
+  if(![lat1,lon1,lat2,lon2].every(valid) ||
+     Math.abs(lat1)>90 || Math.abs(lat2)>90 ||
+     Math.abs(lon1)>180 || Math.abs(lon2)>180){
+    $("courseResult").innerHTML='<span class="error">Enter valid latitude and longitude values.</span>';
+    return;
+  }
+
+  const r=Math.PI/180;
+  const p1=lat1*r,p2=lat2*r;
+  const dl=(lon2-lon1)*r;
+  const dp=p2-p1;
+
+  const a=Math.sin(dp/2)**2+
+          Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  const central=2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));
+  const distance=3440.065*central;
+
+  const y=Math.sin(dl)*Math.cos(p2);
+  const x=Math.cos(p1)*Math.sin(p2)-
+          Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  const bearing=norm360(Math.atan2(y,x)/r);
+
+  $("courseResult").innerHTML=
+    `Initial True Course = <b>${fmt(bearing)}°T</b><br>`+
+    `Great-circle Distance = <b>${fmt(distance)} NM</b>`;
+}
+
+function calcETA(){
+  const date=$("etaDate").value;
+  const time=$("etaTime").value;
+  const d=num("etaDistance");
+  const s=num("etaSpeed");
+
+  if(!date || !time || !(d>=0) || !(s>0)){
+    $("etaResult").innerHTML='<span class="error">Enter date, time, distance and a positive speed.</span>';
+    return;
+  }
+
+  const departure=new Date(`${date}T${time}:00`);
+  if(Number.isNaN(departure.getTime())){
+    $("etaResult").innerHTML='<span class="error">Invalid departure date or time.</span>';
+    return;
+  }
+
+  const hours=d/s;
+  const eta=new Date(departure.getTime()+hours*3600000);
+
+  $("etaResult").innerHTML=
+    `Passage Time = <b>${fmt(hours)} hours</b><br>`+
+    `ETA = <b>${eta.toLocaleString()}</b>`;
+}
+
+function calcCurrent(){
+  const c=num("shipCourse"),s=num("shipSpeed");
+  const set=num("currentSet"),drift=num("currentDrift");
+
+  if(![c,s,set,drift].every(valid) || s<0 || drift<0){
+    $("currentResult").innerHTML='<span class="error">Enter valid course, speed, set and drift.</span>';
+    return;
+  }
+
+  const r=Math.PI/180;
+  const sx=s*Math.sin(c*r);
+  const sy=s*Math.cos(c*r);
+  const cx=drift*Math.sin(set*r);
+  const cy=drift*Math.cos(set*r);
+
+  const east=sx+cx;
+  const north=sy+cy;
+
+  const resultantSpeed=Math.hypot(east,north);
+  const resultantCourse=norm360(Math.atan2(east,north)/r);
+
+  $("currentResult").innerHTML=
+    `Resultant Course = <b>${fmt(resultantCourse)}°T</b><br>`+
+    `Resultant Speed = <b>${fmt(resultantSpeed)} knots</b>`;
+}
+</script>
+</body>
+</html>
